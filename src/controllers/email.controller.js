@@ -1,8 +1,7 @@
-import { cache } from "../services/cacheService.js";
 import User from "../models/user.model.js";
 import IgnoreThread from "../models/ignoredThread.model.js";
+import CacheMessage from "../models/CacheMessage.js";
 
-//Serverni tekshirish uchun
 export const serverTest = async (req, res) => {
     try {
         res.status(200).json({ success: true, message: "Server ishlayapti" });
@@ -11,13 +10,24 @@ export const serverTest = async (req, res) => {
     }
 }
 
-export const emailCashe = async (req, res) => {
+export const emailCache = async (req, res) => {
     try {
-        res.status(200).json(cache.results);
+        // MongoDB'dan barcha saqlangan javobsiz xabarlarni olamiz
+        const messages = await CacheMessage.find().sort({ date: -1 });
+
+        res.status(200).json({
+            success: true,
+            count: messages.length,
+            data: messages
+        });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        console.error("❌ emailCache xatolik:", error.message);
+        res.status(500).json({
+            success: false,
+            message: "Server xatosi: " + error.message
+        });
     }
-}
+};
 
 //  Emailni ignor qilish
 export const ignoreEmail = async (req, res) => {
@@ -28,13 +38,13 @@ export const ignoreEmail = async (req, res) => {
             return res.status(400).json({ ok: false, error: "threadId yoki deviceId yo'q" });
         }
 
-        // 🔸 Avvaldan mavjud emasligini tekshirish
+        // 🔹 1. Avvaldan mavjud emasligini tekshiramiz
         const existing = await IgnoreThread.findOne({ threadId, deviceId });
         if (existing) {
             return res.status(200).json({ ok: true, message: "Bu email allaqachon ignor qilingan" });
         }
 
-        // 🔸 Yangi ignor yozuvini yaratish
+        // 🔹 2. Yangi ignor yozuvini saqlaymiz
         await IgnoreThread.create({
             threadId,
             deviceId,
@@ -43,16 +53,20 @@ export const ignoreEmail = async (req, res) => {
             role,
             name,
             subject,
-            date
+            date,
         });
 
-        // 🔸 Cache’dan o‘chirish (agar mavjud bo‘lsa)
-        if (cache?.results) {
-            cache.results = cache.results.filter(e => e.threadId !== threadId);
-        }
+        // 🔹 3. CacheMessage’dan ham shu xabarni o‘chirib tashlaymiz
+        const deleted = await CacheMessage.deleteOne({ threadId });
 
-        res.json({ ok: true });
+        res.json({
+            ok: true,
+            message: deleted.deletedCount
+                ? "Ignor qo‘shildi va CacheMessage’dan o‘chirildi"
+                : "Ignor qo‘shildi (cache topilmadi)",
+        });
     } catch (error) {
+        console.error("❌ ignoreEmail xatolik:", error.message);
         res.status(500).json({ ok: false, error: error.message });
     }
 };
@@ -74,30 +88,36 @@ export const ignoredEmails = async (req, res) => {
 export const restoreEmail = async (req, res) => {
     try {
         const { threadId, deviceId } = req.body;
-        if (!threadId || !deviceId)
+        if (!threadId || !deviceId) {
             return res.status(400).json({ ok: false, error: "threadId yoki deviceId yo'q" });
+        }
 
-        // DBdan topamiz
+        // 🔹 DBdan topamiz
         const ignored = await IgnoreThread.findOne({ threadId, deviceId });
-        if (!ignored)
+        if (!ignored) {
             return res.status(404).json({ ok: false, error: "Email topilmadi" });
+        }
 
-        // Cache mavjud bo‘lsa, qayta qo‘shamiz (to‘liq strukturada)
-        if (cache?.results) {
-            cache.results.push({
+        // 🔹 Ignore DBdan o‘chiramiz
+        await IgnoreThread.deleteOne({ _id: ignored._id });
+
+        // 🔹 Qayta CacheMessage ga qo‘shish (agar kerak bo‘lsa)
+        // Agar xabar ilgari CacheMessage’dan o‘chirib tashlangan bo‘lsa,
+        // uni qayta qo‘shish mumkin:
+        const existsInCache = await CacheMessage.findOne({ threadId });
+        if (!existsInCache) {
+            await CacheMessage.create({
                 threadId: ignored.threadId,
                 name: ignored.name || "No name",
+                email: ignored.email || "",          // agar email saqlangan bo‘lsa
                 subject: ignored.subject || "",
-                snippet: ignored.subject || "", // snippet sifatida subject yoki qisqa mazmun
+                snippet: ignored.snippet || ignored.subject || "",
                 date: ignored.date || new Date().toISOString(),
-                fromIgnoreRestore: true // debug uchun flag (xohlasa olib tashlasa bo‘ladi)
+                messageId: ignored.messageId || "",
             });
         }
 
-        // Ignore DBdan o‘chiramiz
-        await IgnoreThread.deleteOne({ _id: ignored._id });
-
-        res.json({ ok: true });
+        res.json({ ok: true, message: "Email restore qilindi va CacheMessage ga qayta qo‘shildi" });
     } catch (error) {
         console.error("Restore error:", error);
         res.status(500).json({ ok: false, error: error.message });

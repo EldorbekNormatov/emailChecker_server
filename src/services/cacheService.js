@@ -1,32 +1,43 @@
+// services/cacheUpdater.js
+import CacheMessage from "../models/CacheMessage.js";
 import IgnoreThread from "../models/ignoredThread.model.js";
 import Keyword from "../models/keyword.model.js";
 import { fetchReadUnrepliedMessages } from "./gmailService.js";
+import { updateCachedMessages } from "./updateCachedMessages.js";
 
-export let cache = { results: [], time: 0 };
+let updating = false;
 
 async function getConfig() {
   const keywordDoc = await Keyword.findOne();
   const keywords = keywordDoc?.words || [];
-  const daysRange = parseInt(process.env.DAYS_RANGE) || 5;
+  const daysRange = parseInt(process.env.DAYS_RANGE) || 3;
   return { keywords, daysRange };
 }
-
-let updating = false;
 
 export async function updateCache() {
   if (updating) return;
   updating = true;
 
   try {
-    const CONFIG = await getConfig();
-
+    // 🧠 Ignore’larni olish
     const ignoredDocs = await IgnoreThread.find({}, "threadId");
     const ignoredThreadIds = ignoredDocs.map(doc => doc.threadId);
 
-    const results = await fetchReadUnrepliedMessages(CONFIG.keywords, CONFIG.daysRange, ignoredThreadIds);
+    // 🧠 Config (keyword, days)
+    const CONFIG = await getConfig();
 
-    cache = { results, time: Date.now() };
-    console.log(`Cache yangilandi: ${results.length} xabar (ignorlar chiqarib tashlandi)`);
+    // 🔄 Gmail’dan unreplied xabarlarni olish
+    await fetchReadUnrepliedMessages(CONFIG.keywords, CONFIG.daysRange, ignoredThreadIds);
+
+    // 🧹 Ignore’larni MongoDB’dan o‘chirish
+    if (ignoredThreadIds.length) {
+      await CacheMessage.deleteMany({ threadId: { $in: ignoredThreadIds } });
+      console.log(`🧹 ${ignoredThreadIds.length} ta ignore qilingan xabar o‘chirildi. ${new Date()}`);
+    }
+
+    // ✅ Javob yozilgan xabarlarni tekshirib o‘chirish
+    await updateCachedMessages();
+
   } catch (e) {
     console.error("Cache update xatolik:", e);
   } finally {
@@ -35,5 +46,6 @@ export async function updateCache() {
 }
 
 export function startCacheUpdater() {
-  setInterval(updateCache, 60 * 1000);
+  console.log("🕒 Cache updater ishga tushdi...");
+  setInterval(updateCache, 60 * 1000); // har 1 daqiqada
 }

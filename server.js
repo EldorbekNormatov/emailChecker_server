@@ -9,9 +9,9 @@ import { startIgnoreCleaner } from "./src/utils/ignoreCleaner.js";
 import { gmail } from "./src/config/gmail.js";
 
 dotenv.config();
-
-const app = express();
-
+    
+const app = express(); 
+  
 // ✅ Allowed web origins (you can add more if needed)
 const allowedOrigins = [
   "https://emailchecker.nvmailer.uz",
@@ -68,3 +68,4 @@ startCacheUpdater();
 
 // 🚀 Serverni ishga tushirish
 app.listen(PORT, () => console.log(`✅ Server ${PORT} portda ishga tushdi`));
+ 
