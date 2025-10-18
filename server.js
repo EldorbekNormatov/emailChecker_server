@@ -68,4 +68,4 @@ startCacheUpdater();
 
 // 🚀 Serverni ishga tushirish
 app.listen(PORT, () => console.log(`✅ Server ${PORT} portda ishga tushdi`));
- 
+  
