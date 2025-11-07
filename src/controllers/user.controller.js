@@ -23,3 +23,13 @@ export const updateUserByDeviceId = async (req, res) => {
     res.json({ ok: false });
   }
 };
+
+export const deleteUserByDeviceId = async (req, res) => {
+  try {
+    const deleted = await User.findOneAndDelete({ deviceId: req.params.deviceId });
+    if (!deleted) return res.json({ ok: false });
+    res.json({ ok: true, user: deleted });
+  } catch {
+    res.json({ ok: false });
+  }
+};

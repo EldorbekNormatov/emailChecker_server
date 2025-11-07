@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { emailCache, getAllIgnoredEmails, getUsers, ignoreEmail, ignoredEmails, restoreEmail, serverTest, userRegister } from "../controllers/email.controller.js";
-import { getUserByDeviceId, updateUserByDeviceId } from "../controllers/user.controller.js";
+import { deleteUserByDeviceId, getUserByDeviceId, updateUserByDeviceId } from "../controllers/user.controller.js";
 
 const router = Router()
 
@@ -15,6 +15,8 @@ router.get('/users', getUsers);
 // === DeviceId bo‘yicha user ===
 router.get("/users/:deviceId", getUserByDeviceId);
 router.put("/users/:deviceId", updateUserByDeviceId);
+router.delete("/users/:deviceId", deleteUserByDeviceId);
+
 
 
 
