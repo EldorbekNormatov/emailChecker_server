@@ -55,7 +55,7 @@ export const EmailSend = async (req, res) => {
 
     const mailOptions = {
       from: "eldorbek052@gmail.com",
-      to: email || "eldorbekn52@gmail.com",
+      to: email ,
       subject: `${pickup} to ${delivery}`,
       html: messageBody,
       attachments: [{ filename: "Sticker.jpg", path: logoPath, cid: "logo" }],
