@@ -136,76 +136,77 @@ export const getAllIgnoredEmails = async (req, res) => {
 };
 
 export const userRegister = async (req, res) => {
-    try {
-        const {
-            deviceId,
-            firstName,
-            lastName,
-            role,
-            ua,
-            platform,
-            language,
-            screenRes,
-            memory,
-            cores,
-            ip,
-            city,
-            region,
-            country,
-        } = req.body;
+  try {
+    const {
+      deviceId,
+      firstName,
+      lastName,
+      role,
+      ua,
+      platform,
+      language,
+      screenRes,
+      memory,
+      cores,
+      ip,
+      city,
+      region,
+      country,
+    } = req.body;
 
-        if (!ip || !firstName || !lastName || !role) {
-            return res.status(400).json({ ok: false, msg: "Missing fields" });
-        }
-
-        // 🔍 IP bo‘yicha foydalanuvchini qidiramiz
-        let user = await User.findOne({ ip });
-
-        if (user) {
-            // 🟢 IP topilgan bo‘lsa — o‘sha userni yangilaymiz (IP o‘zgarmaydi)
-            user.deviceId = deviceId || user.deviceId;
-            user.firstName = firstName || user.firstName;
-            user.lastName = lastName || user.lastName;
-            user.role = role || user.role;
-            user.ua = ua || user.ua;
-            user.platform = platform || user.platform;
-            user.language = language || user.language;
-            user.screenRes = screenRes || user.screenRes;
-            user.memory = memory || user.memory;
-            user.cores = cores || user.cores;
-            user.city = city || user.city;
-            user.region = region || user.region;
-            user.country = country || user.country;
-            user.lastLogin = new Date();
-
-            // ⚠️ IP o‘zgartirilmaydi!
-            await user.save();
-        } else {
-            // 🔵 IP topilmasa — yangi user yaratamiz
-            user = await User.create({
-                deviceId,
-                firstName,
-                lastName,
-                role,
-                ua,
-                platform,
-                language,
-                screenRes,
-                memory,
-                cores,
-                ip,
-                city,
-                region,
-                country,
-                lastLogin: new Date(),
-            });
-        }
-
-        res.json({ ok: true, user });
-    } catch (err) {
-        console.error("Register error:", err);
-        res.status(500).json({ ok: false, msg: "Server error" });
+    // deviceId endi majburiy (IP ishonchli emasligi sabab)
+    if (!deviceId || !firstName || !lastName || !role) {
+      return res.status(400).json({ ok: false, msg: "Missing fields" });
     }
+
+    // 🔍 deviceId bo‘yicha foydalanuvchini qidiramiz (IP o'rniga)
+    let user = await User.findOne({ deviceId });
+
+    if (user) {
+      // 🟢 deviceId topilgan bo‘lsa — o‘sha userni yangilaymiz
+      user.deviceId = deviceId || user.deviceId;
+      user.firstName = firstName || user.firstName;
+      user.lastName = lastName || user.lastName;
+      user.role = role || user.role;
+      user.ua = ua || user.ua;
+      user.platform = platform || user.platform;
+      user.language = language || user.language;
+      user.screenRes = screenRes || user.screenRes;
+      user.memory = memory || user.memory;
+      user.cores = cores || user.cores;
+      user.ip = ip || user.ip;               // IP optional yangilanadi
+      user.city = city || user.city;
+      user.region = region || user.region;
+      user.country = country || user.country;
+      user.lastLogin = new Date();
+
+      await user.save();
+    } else {
+      // 🔵 deviceId topilmasa — yangi user yaratamiz
+      user = await User.create({
+        deviceId,
+        firstName,
+        lastName,
+        role,
+        ua,
+        platform,
+        language,
+        screenRes,
+        memory,
+        cores,
+        ip,
+        city,
+        region,
+        country,
+        lastLogin: new Date(),
+      });
+    }
+
+    res.json({ ok: true, user });
+  } catch (err) {
+    console.error("Register error:", err);
+    res.status(500).json({ ok: false, msg: "Server error" });
+  }
 };
 
 
