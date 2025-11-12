@@ -11,10 +11,8 @@ export const EmailSend = async (req, res) => {
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        // user: "dispatch@navinixllc.com",
-        // pass: "xrmrndthoiwxfmvg", // App Password
-        user: "eldorbek052@gmail.com",
-        pass: "zzjvbiceitbcigvl", // App Password
+        user: "dispatch@navinixllc.com",
+        pass: "xrmrndthoiwxfmvg", // App Password
       },
     });
 
@@ -65,7 +63,7 @@ export const EmailSend = async (req, res) => {
 
 
     const mailOptions = {
-      from: "eldorbek052@gmail.com",
+      from: "dispatch@navinixllc.com",
       to: email,
       subject: `${pickup} to ${delivery}`,
       html: messageBody,
