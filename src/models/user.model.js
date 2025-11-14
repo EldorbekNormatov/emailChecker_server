@@ -2,10 +2,12 @@ import { Schema, model } from "mongoose";
 
 const UserSchema = new Schema(
   {
-    deviceId: { type: String, unique: true },
-    firstName: String,
-    lastName: String,
-    role: String,
+    deviceId: { type: String, required: true },
+    firstName: { type: String, required: true },
+    lastName: { type: String, required: true },
+    role: { type: String, required: true }, // admin / user
+    isAdmin: { type: Boolean, default: false }, // super admin flag
+    adminLabel: { type: String, default: null }, // "super admin" kalit so'zi
     ua: String,
     platform: String,
     language: String,

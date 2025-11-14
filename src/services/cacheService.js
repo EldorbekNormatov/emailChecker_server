@@ -45,7 +45,7 @@ export async function updateCache() {
     // ✅ Javob yozilgan xabarlarni 7 daqiqada 1 marta tekshirish
     const now = Date.now();
     if (now - lastUpdateCheck > 7 * 60 * 1000) {
-      console.log("🧹 Javob berilgan xabarlar tozalanmoqda...");
+      console.log(`🧹 Javob berilgan xabarlar tozalanmoqda... ${new Date()}`);
       await updateCachedMessages();
       lastUpdateCheck = now;
     }

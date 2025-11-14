@@ -1,6 +1,8 @@
 import User from "../models/user.model.js";
 import IgnoreThread from "../models/ignoredThread.model.js";
 import CacheMessage from "../models/CacheMessage.js";
+import AdminPassword from "../models/adminPassword.model.js";
+import Password from "../models/password.model.js";
 
 export const serverTest = async (req, res) => {
     try {
@@ -136,77 +138,95 @@ export const getAllIgnoredEmails = async (req, res) => {
 };
 
 export const userRegister = async (req, res) => {
-  try {
-    const {
-      deviceId,
-      firstName,
-      lastName,
-      role,
-      ua,
-      platform,
-      language,
-      screenRes,
-      memory,
-      cores,
-      ip,
-      city,
-      region,
-      country,
-    } = req.body;
+    try {
+        const {
+            deviceId,
+            firstName,
+            lastName,
+            role,
+            password,
+            ua,
+            platform,
+            language,
+            screenRes,
+            memory,
+            cores,
+            ip,
+            city,
+            region,
+            country,
+        } = req.body;
 
-    // deviceId endi majburiy (IP ishonchli emasligi sabab)
-    if (!deviceId || !firstName || !lastName || !role) {
-      return res.status(400).json({ ok: false, msg: "Missing fields" });
+
+        // 1️⃣ Minimal required tekshiruv
+        if (!firstName || !lastName || !password) {
+            return res.status(400).json({ ok: false, msg: "firstName, lastName va password talab qilinadi" });
+        }
+
+        // 2️⃣ Ism va familiya takrorlanishini tekshirish
+        const existingUser = await User.findOne({ firstName, lastName });
+        if (existingUser) {
+            return res.status(400).json({ ok: false, msg: "Bu ism va familiya allaqachon mavjud" });
+        }
+
+        let isAdmin = false;
+        let adminLabel = null;
+
+        // 3️⃣ Admin password tekshirish
+        const adminPassDoc = await AdminPassword.findOne({}); // Hozircha bitta hujjat deb hisoblaymiz
+
+
+        if (adminPassDoc && String(password) === String(adminPassDoc.passwordHash)) {
+            console.log("Admin password document:", password);
+            isAdmin = true;
+            adminLabel = adminPassDoc.label || "super admin";
+        } else {
+            const validPassword = await Password.findOne({ passwordHash: password });
+            if (!validPassword) {
+                return res.status(400).json({ ok: false, msg: "Noto‘g‘ri parol" });
+            }
+        }
+
+
+
+        // 5️⃣ Yangi user yaratish
+        const user = await User.create({
+            deviceId,
+            firstName,
+            lastName,
+            role,
+            isAdmin,
+            adminLabel,
+            ua,
+            platform,
+            language,
+            screenRes,
+            memory,
+            cores,
+            ip,
+            city,
+            region,
+            country,
+            lastLogin: new Date(),
+        });
+
+        // 6️⃣ Javob
+        return res.json({
+            ok: true,
+            user: {
+                deviceId: user.deviceId,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                role: user.role,
+                isAdmin,
+                adminLabel,
+            },
+        });
+
+    } catch (err) {
+        console.error("Register error:", err);
+        return res.status(500).json({ ok: false, msg: "Server error" });
     }
-
-    // 🔍 deviceId bo‘yicha foydalanuvchini qidiramiz (IP o'rniga)
-    let user = await User.findOne({ deviceId });
-
-    if (user) {
-      // 🟢 deviceId topilgan bo‘lsa — o‘sha userni yangilaymiz
-      user.deviceId = deviceId || user.deviceId;
-      user.firstName = firstName || user.firstName;
-      user.lastName = lastName || user.lastName;
-      user.role = role || user.role;
-      user.ua = ua || user.ua;
-      user.platform = platform || user.platform;
-      user.language = language || user.language;
-      user.screenRes = screenRes || user.screenRes;
-      user.memory = memory || user.memory;
-      user.cores = cores || user.cores;
-      user.ip = ip || user.ip;               // IP optional yangilanadi
-      user.city = city || user.city;
-      user.region = region || user.region;
-      user.country = country || user.country;
-      user.lastLogin = new Date();
-
-      await user.save();
-    } else {
-      // 🔵 deviceId topilmasa — yangi user yaratamiz
-      user = await User.create({
-        deviceId,
-        firstName,
-        lastName,
-        role,
-        ua,
-        platform,
-        language,
-        screenRes,
-        memory,
-        cores,
-        ip,
-        city,
-        region,
-        country,
-        lastLogin: new Date(),
-      });
-    }
-
-    res.json({ ok: true, user });
-  } catch (err) {
-    console.error("Register error:", err);
-    res.status(500).json({ ok: false, msg: "Server error" });
-  }
 };
 
 
