@@ -18,35 +18,73 @@ const allowedOrigins = [
   "http://emailchecker.nvmailer.uz",
   "https://www.emailchecker.nvmailer.uz",
   "http://localhost:3012",
+  "https://one.dat.com",
+  "https://scm.jbhunt.com",
+  "https://freightpower.schneider.com", // ✅ Add Schneider FreightPower
 ];
 
 // ✅ Universal CORS configuration (includes Chrome extensions)
+// app.use(
+//   cors({
+//     origin: function (origin, callback) {
+//       // Allow requests with no origin (curl, Postman, etc.)
+//       if (!origin) return callback(null, true);
+
+//       const normalizedOrigin = origin.toLowerCase();
+
+//       // Allow all Chrome extensions
+//       if (normalizedOrigin.startsWith("chrome-extension://")) {
+//         return callback(null, true);
+//       }
+
+//       // Allow specific domains
+//       if (allowedOrigins.includes(normalizedOrigin)) {
+//         return callback(null, true);
+//       }
+
+//       console.log("❌ CORS blocked origin:", origin);
+//       return callback(new Error("CORS policy: origin not allowed"));
+//     },
+//     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+//     allowedHeaders: ["Content-Type", "Authorization"],
+//     credentials: true,
+//   })
+// );
+
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Allow requests with no origin (curl, Postman, etc.)
+      // Allow requests with no origin (curl, Postman, mobile apps)
       if (!origin) return callback(null, true);
 
+      // 🔥 normalize domain (yangi qo‘shildi)
       const normalizedOrigin = origin.toLowerCase();
 
-      // Allow all Chrome extensions
+      // Allow Chrome extensions
       if (normalizedOrigin.startsWith("chrome-extension://")) {
         return callback(null, true);
       }
 
-      // Allow specific domains
+      // Allow only known domains (lowercase bilan solishtiramiz)
       if (allowedOrigins.includes(normalizedOrigin)) {
         return callback(null, true);
       }
 
-      console.log("❌ CORS blocked origin:", origin);
-      return callback(new Error("CORS policy: origin not allowed"));
+      console.warn("❌ CORS blocked:", origin);
+      return callback(new Error("Not allowed by CORS"));
     },
+
+    // 🔥 PUT, DELETE, OPTIONS qo‘shildi
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+
+    // OLDIN BO‘LGANI O‘ZGARMADI
     allowedHeaders: ["Content-Type", "Authorization"],
+
+    // 🔥 cookie/session/token ishlashi uchun
     credentials: true,
   })
 );
+
 
 app.use(express.json());
 

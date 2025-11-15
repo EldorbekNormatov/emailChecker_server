@@ -2,6 +2,7 @@ import { Router } from "express";
 import { emailCache, getAllIgnoredEmails, getUsers, ignoreEmail, ignoredEmails, restoreEmail, serverTest, userRegister } from "../controllers/email.controller.js";
 import { deleteUserByDeviceId, getUserByDeviceId, updateUserByDeviceId } from "../controllers/user.controller.js";
 import { EmailSend } from "../controllers/emailSender.controller.js";
+import { TollSmart } from "../controllers/tollSmart.controller.js";
 
 const router = Router()
 
@@ -18,6 +19,7 @@ router.get("/users/:deviceId", getUserByDeviceId);
 router.put("/users/:deviceId", updateUserByDeviceId);
 router.delete("/users/:deviceId", deleteUserByDeviceId);
 router.post("/sendEmail", EmailSend)
+router.post("/tollSmart", TollSmart) 
 
 
 
