@@ -3,6 +3,7 @@ import IgnoreThread from "../models/ignoredThread.model.js";
 import CacheMessage from "../models/CacheMessage.js";
 import AdminPassword from "../models/adminPassword.model.js";
 import Password from "../models/password.model.js";
+import MessageSendCount from "../models/messageSendCount.model.js";
 
 export const serverTest = async (req, res) => {
     try {
@@ -232,10 +233,85 @@ export const userRegister = async (req, res) => {
 
 export const getUsers = async (req, res) => {
     try {
-
         const users = await User.find().select("-__v").lean();
-        res.json({ ok: true, users });
+
+        // Amerika vaqt zonasi uchun offset (masalan, EST UTC-5)
+        const offsetHours = -5; // EST
+        const now = new Date();
+
+        // Amerika vaqti bilan bugun boshlanishi
+        const estNow = new Date(now.getTime() + offsetHours * 60 * 60 * 1000);
+
+        const todayStart = new Date(estNow);
+        todayStart.setHours(0, 0, 0, 0); // EST bo'yicha bugun boshlanishi
+
+        const todayEnd = new Date(todayStart);
+        todayEnd.setDate(todayStart.getDate() + 1); // EST bo'yicha bugun oxiri
+
+        const yesterdayStart = new Date(todayStart);
+        yesterdayStart.setDate(todayStart.getDate() - 1); // EST bo'yicha kecha boshlanishi
+
+        // Har bir user uchun hisoblash
+        const usersWithCounts = await Promise.all(users.map(async (user) => {
+            const todayCount = await MessageSendCount.countDocuments({
+                deviceId: user.deviceId,
+                sentAt: { $gte: todayStart, $lt: todayEnd }
+            });
+
+            const yesterdayCount = await MessageSendCount.countDocuments({
+                deviceId: user.deviceId,
+                sentAt: { $gte: yesterdayStart, $lt: todayStart }
+            });
+
+            return {
+                ...user,
+                messageStats: {
+                    today: todayCount,
+                    yesterday: yesterdayCount
+                }
+            };
+        }));
+
+        res.json({ ok: true, users: usersWithCounts });
     } catch (error) {
+        console.error(error);
         res.status(500).json({ ok: false, msg: "Server error" });
     }
-}
+};
+
+
+export const notifyDevice = async (req, res) => {
+    try {
+        const { deviceId } = req.body;
+
+        console.log(deviceId)
+
+        if (!deviceId) {
+            return res.status(400).json({ ok: false, msg: "deviceId is required" });
+        }
+
+        const user = await User.findOne({ deviceId });
+        if (!user) {
+            return res.status(404).json({ ok: false, msg: "User not found" });
+        }
+
+        // Har safar yangi record yaratamiz
+        await MessageSendCount.create({
+            userId: user._id,
+            deviceId,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            role: user.role,
+            count: 1,
+            sentAt: new Date()
+        });
+
+        return res.status(200).json({ ok: true, msg: "Message delivery information has been recorded!" });
+
+    } catch (err) {
+        console.error("Notify error:", err);
+        return res.status(500).json({ ok: false, msg: "Server error" });
+    }
+};
+
+

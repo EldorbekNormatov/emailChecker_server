@@ -7,11 +7,13 @@ import { connectDB } from "./src/database/db.js";
 import dotenv from "dotenv";
 import { startIgnoreCleaner } from "./src/utils/ignoreCleaner.js";
 import { gmail } from "./src/config/gmail.js";
+import cron from "node-cron";
+import { cleanupOldMessagesNY } from "./src/utils/cleaneMessageCount.js";
 
 dotenv.config();
-    
-const app = express(); 
-  
+
+const app = express();
+
 // ✅ Allowed web origins (you can add more if needed)
 const allowedOrigins = [
   "https://emailchecker.nvmailer.uz",
@@ -85,6 +87,14 @@ app.use(
   })
 );
 
+// 🔹 Server ishga tushganda bir marta eski xabarlarni tozalash
+cleanupOldMessagesNY();
+
+// 🔹 Cron bilan har kuni NY vaqti bilan soat 00:05 da avtomatik ishlash
+cron.schedule("5 0 * * *", () => {
+  cleanupOldMessagesNY();
+  console.log("🕒 Cron ran: cleaning old messages");
+});
 
 app.use(express.json());
 
@@ -106,4 +116,3 @@ startCacheUpdater();
 
 // 🚀 Serverni ishga tushirish
 app.listen(PORT, () => console.log(`✅ Server ${PORT} portda ishga tushdi`));
-  
