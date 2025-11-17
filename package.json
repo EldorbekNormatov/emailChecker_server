@@ -17,6 +17,7 @@
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "googleapis": "^162.0.0",
+    "https-proxy-agent": "^7.0.6",
     "luxon": "^3.7.2",
     "mongoose": "^8.19.1",
     "node-cron": "^4.2.1",
