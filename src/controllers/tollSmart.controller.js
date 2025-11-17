@@ -45,7 +45,7 @@ export const TollSmart = async (req, res) => {
     // Force US EASTERN TIME
     const easternNow = DateTime.now()
       .setZone("America/New_York")
-      .toISO(); // ISO string in EST
+      .toISO();
 
     console.log("🕒 Using Eastern Time:", easternNow);
 
@@ -65,47 +65,39 @@ export const TollSmart = async (req, res) => {
     const destination = coords[coords.length - 1];
     const waypoints = coords.slice(1, -1);
 
-    // Tractor Trailer Payload
     const payload = {
       origin,
       destination,
       waypoints,
       key: process.env.TOLLSMART_API_KEY,
-
-      timestamp: easternNow, 
-
+      timestamp: easternNow,
       usa_accounts: [],
-      
       vehicle: {
         vehicle_type: "tractor_trailer",
-
         is_truck: true,
         is_commercial: true,
         has_trailer: true,
         is_special_load: false,
-
         weight: 80000,
         height: 162,
         width: 102,
         length: 888,
-
         total_number_of_axles: 5,
         number_of_axles_without_trailer: 3,
         trailer_number_of_axles: 2,
-
         has_dual_tires: true,
         trailer_has_dual_tires: true,
       },
-
       options: {
         include_route: true,
         include_tolls_details: true
       }
     };
 
-    console.log("🚛 Sending request to TollSmart...");
+    console.log("🚛 Sending request to TollSmart Worker...");
 
-    const response = await fetch("https://api.tollsmart.com/TollsAPI/osm/calculate", {
+    // 🔥 ONLY THIS LINE IS CHANGED
+    const response = await fetch("https://muddy-paper-d466.asrorabdimannonov363.workers.dev", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
@@ -116,30 +108,25 @@ export const TollSmart = async (req, res) => {
       return res.status(response.status).json({ success: false, message: text });
     }
 
-
     const data = await response.json();
-const routeData = data[0] || {};
+    const routeData = data[0] || {};
 
-// --- Select highest toll ---
-let fee = {};
-if (Array.isArray(routeData.total_tolls_fees) && routeData.total_tolls_fees.length > 0) {
-  fee = routeData.total_tolls_fees.reduce((max, cur) => {
-    const curValue = cur.total_cash_value || 0;
-    const maxValue = max.total_cash_value || 0;
-    return curValue > maxValue ? cur : max;
-  });
-}
-
+    let fee = {};
+    if (Array.isArray(routeData.total_tolls_fees) && routeData.total_tolls_fees.length > 0) {
+      fee = routeData.total_tolls_fees.reduce((max, cur) => {
+        const curValue = cur.total_cash_value || 0;
+        const maxValue = max.total_cash_value || 0;
+        return curValue > maxValue ? cur : max;
+      });
+    }
 
     const miles = (routeData.distance_meters || 0) / 1609.34;
 
     const summary = {
       distanceMiles: +miles.toFixed(2),
       durationHours: +((routeData.duration_seconds || 0) / 3600).toFixed(2),
-
       cashPrice: fee.total_cash_value || 0,
       transponderPrice: fee.total_etc_value || fee.total_cash_value || 0,
-
       currency: fee.currency || "USD"
     };
 
