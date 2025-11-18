@@ -91,7 +91,12 @@ app.use(
 cleanupOldMessagesNY();
 
 // 🔹 Cron bilan har kuni NY vaqti bilan soat 00:05 da avtomatik ishlash
-cleanupOldMessagesNY();
+cron.schedule("5 0 * * *", () => {
+  cleanupOldMessagesNY();
+}, {
+  scheduled: true,
+  timezone: "America/New_York"
+});
 
 
 app.use(express.json());
