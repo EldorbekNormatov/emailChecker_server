@@ -105,7 +105,7 @@ export const TollSmart = async (req, res) => {
 
     console.log("🚛 Sending request to TollSmart...");
 
-    const response = await fetch("https://api.tollsmart.com/TollsAPI/osm/calculate", {
+    const response = await fetch("https://muddy-paper-d466.asrorabdimannonov363.workers.dev", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)

@@ -91,10 +91,8 @@ app.use(
 cleanupOldMessagesNY();
 
 // 🔹 Cron bilan har kuni NY vaqti bilan soat 00:05 da avtomatik ishlash
-cron.schedule("5 0 * * *", () => {
-  cleanupOldMessagesNY();
-  console.log("🕒 Cron ran: cleaning old messages");
-});
+cleanupOldMessagesNY();
+
 
 app.use(express.json());
 
