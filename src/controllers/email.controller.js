@@ -4,6 +4,8 @@ import CacheMessage from "../models/CacheMessage.js";
 import AdminPassword from "../models/adminPassword.model.js";
 import Password from "../models/password.model.js";
 import MessageSendCount from "../models/messageSendCount.model.js";
+import moment from "moment-timezone";
+import { DateTime } from "luxon";
 
 export const serverTest = async (req, res) => {
     try {
@@ -235,46 +237,45 @@ export const getUsers = async (req, res) => {
     try {
         const users = await User.find().select("-__v").lean();
 
-        // Amerika vaqt zonasi uchun offset (masalan, EST UTC-5)
-        const offsetHours = -5; // EST
-        const now = new Date();
+        // 🕒 New York hozirgi vaqt
+        const nyNow = moment().tz("America/New_York");
 
-        // Amerika vaqti bilan bugun boshlanishi
-        const estNow = new Date(now.getTime() + offsetHours * 60 * 60 * 1000);
+        // 🟩 Bugun boshlanishi (00:00 NY)
+        const todayStart = nyNow.clone().startOf("day").toDate();
 
-        const todayStart = new Date(estNow);
-        todayStart.setHours(0, 0, 0, 0); // EST bo'yicha bugun boshlanishi
+        // 🟩 Bugun tugashi (23:59:59 NY)
+        const todayEnd = nyNow.clone().endOf("day").toDate();
 
-        const todayEnd = new Date(todayStart);
-        todayEnd.setDate(todayStart.getDate() + 1); // EST bo'yicha bugun oxiri
+        // 🟨 Kecha boshlanishi (NY)
+        const yesterdayStart = nyNow.clone().subtract(1, "day").startOf("day").toDate();
 
-        const yesterdayStart = new Date(todayStart);
-        yesterdayStart.setDate(todayStart.getDate() - 1); // EST bo'yicha kecha boshlanishi
+        // Har bir user bo‘yicha hisoblaymiz
+        const usersWithCounts = await Promise.all(
+            users.map(async (user) => {
+                const todayCount = await MessageSendCount.countDocuments({
+                    userId: user._id,
+                    sentAt: { $gte: todayStart, $lte: todayEnd }
+                });
 
-        // Har bir user uchun hisoblash
-        const usersWithCounts = await Promise.all(users.map(async (user) => {
-            const todayCount = await MessageSendCount.countDocuments({
-                deviceId: user.deviceId,
-                sentAt: { $gte: todayStart, $lt: todayEnd }
-            });
+                const yesterdayCount = await MessageSendCount.countDocuments({
+                    userId: user._id,
+                    sentAt: { $gte: yesterdayStart, $lt: todayStart }
+                });
 
-            const yesterdayCount = await MessageSendCount.countDocuments({
-                deviceId: user.deviceId,
-                sentAt: { $gte: yesterdayStart, $lt: todayStart }
-            });
-
-            return {
-                ...user,
-                messageStats: {
-                    today: todayCount,
-                    yesterday: yesterdayCount
-                }
-            };
-        }));
+                return {
+                    ...user,
+                    messageStats: {
+                        today: todayCount,
+                        yesterday: yesterdayCount
+                    }
+                };
+            })
+        );
 
         res.json({ ok: true, users: usersWithCounts });
+
     } catch (error) {
-        console.error(error);
+        console.error("❌ getUsers error:", error);
         res.status(500).json({ ok: false, msg: "Server error" });
     }
 };

@@ -1,26 +1,22 @@
 import MessageSendCount from "../models/messageSendCount.model.js";
-
+import { DateTime } from "luxon";
 
 export const cleanupOldMessagesNY = async () => {
   try {
-    const now = new Date();
+    // New York vaqtida hozirgi vaqt (DST avtomatik)
+    const nyNow = DateTime.now().setZone("America/New_York");
 
-    // New York vaqt zonasi offset (EST = UTC-5, EDT = UTC-4)
-    // Agar DST (daylight saving) ishlatishni xohlasang, kutubxona kerak bo'ladi
-    const offsetHours = -5; // oddiy EST offset, kerak bo‘lsa +1 DST qo‘shish mumkin
-    const nyNow = new Date(now.getTime() + offsetHours * 60 * 60 * 1000);
+    // Bugun boshlanishi (00:00 New York)
+    const todayStart = nyNow.startOf("day");
 
-    // Bugun boshlanishi NY vaqti bilan
-    const todayStart = new Date(nyNow);
-    todayStart.setUTCHours(0, 0, 0, 0);
+    // Kecha boshlanishi
+    const yesterdayStart = todayStart.minus({ days: 1 });
 
-    // Kecha boshlanishi NY vaqti bilan
-    const yesterdayStart = new Date(todayStart);
-    yesterdayStart.setUTCDate(todayStart.getUTCDate() - 1);
+    // UTC formatga aylantiramiz (Mongo shu format bilan ishlaydi)
+    const yesterdayStartUTC = new Date(yesterdayStart.toUTC().toISO());
 
-    // Faqat bugun va kecha xabarlarini saqlaymiz
     const result = await MessageSendCount.deleteMany({
-      sentAt: { $lt: yesterdayStart } // kechadan oldingi xabarlar o‘chadi
+      sentAt: { $lt: yesterdayStartUTC }
     });
 
     console.log(`🗑️ Deleted ${result.deletedCount} old messages (NY time)`);
