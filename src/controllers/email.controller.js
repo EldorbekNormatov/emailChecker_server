@@ -148,6 +148,8 @@ export const userRegister = async (req, res) => {
             lastName,
             role,
             password,
+            phoneNumber,    // 🟢 YANGI qo‘shildi
+            emailAddress,   // 🟢 YANGI qo‘shildi
             ua,
             platform,
             language,
@@ -200,6 +202,8 @@ export const userRegister = async (req, res) => {
             role,
             isAdmin,
             adminLabel,
+            phoneNumber: phoneNumber || null, 
+            emailAddress: emailAddress || null, 
             ua,
             platform,
             language,
@@ -223,6 +227,8 @@ export const userRegister = async (req, res) => {
                 role: user.role,
                 isAdmin,
                 adminLabel,
+                phoneNumber,
+                emailAddress
             },
         });
 
