@@ -52,7 +52,9 @@ export async function fetchReadUnrepliedMessages(keywords, daysRange, ignoredThr
       break;
     }
 
+
     const threads = listRes.data.threads || [];
+    console.log(threads)
     pageToken = listRes.data.nextPageToken || null;
 
     for (const thread of threads) {
