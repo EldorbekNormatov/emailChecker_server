@@ -16,7 +16,17 @@ export const EmailSend = async (req, res) => {
       },
     });
 
-    const { email, pickup, delivery, referenceId, firstName, lastName, role } = req.body;
+    const { 
+      email, 
+      pickup, 
+      delivery, 
+      referenceId, 
+      firstName, 
+      lastName, 
+      role, 
+      phoneNumber,
+      phoneExt,
+      emailAddress } = req.body;
     const ref = String(referenceId || "").trim();
 
     let messageBody = `
@@ -39,13 +49,26 @@ export const EmailSend = async (req, res) => {
       return res.status(500).json({ error: "Logo file missing" });
     }
 
-    messageBody += `
+messageBody += `
   <p style="font-weight: 600; font-size: 17px; color: #000; margin-bottom: 2px; font-family: Arial, sans-serif;">
     ${firstName} ${lastName}
   </p>
   <p style="font-weight: 600; font-size: 14px; color: #000; margin-top: 0; margin-bottom: 6px; font-family: Arial, sans-serif;">
     ${role}
   </p>
+
+  ${phoneNumber || phoneExt ? `
+    <p style="margin: 2px 0; font-family: Arial, sans-serif; font-size: 14px; color: #333;">
+      📞 Phone: ${phoneNumber ? phoneNumber : ""} ${phoneExt ? `ext ${phoneExt}` : ""}
+    </p>
+  ` : ""}
+
+  ${emailAddress ? `
+    <p style="margin: 2px 0; font-family: Arial, sans-serif; font-size: 14px; color: #333;">
+      ✉️ Email: <a href="mailto:${emailAddress}" style="color: #0073e6;">${emailAddress}</a>
+    </p>
+  ` : ""}
+
   <p style="margin-top: 6px; font-family: Arial, sans-serif; font-size: 14px; color: #333;">
     Thank you for your cooperation!
   </p>
@@ -55,11 +78,11 @@ export const EmailSend = async (req, res) => {
     <p style="margin: 2px 0;">MC 992513, DOT 2927626</p>
     <p style="margin: 2px 0;">Main: 513-252-2094</p>
     <p style="margin: 2px 0;">After hours: 816-974-6688</p>
-    <a href="http://www.navinixllc.com" style="color: #0073e6; text-decoration: none;">www.navinixllc.com</a>
+    <a href="http://www.navinixllc.com" style="color: #0073e6; text-decoration: none;">
+      www.navinixllc.com
+    </a>
   </div>
 `;
-
-
 
 
     const mailOptions = {

@@ -1,7 +1,7 @@
 import { gmail } from "../config/gmail.js";
 import { CacheMessage } from "../models/CacheMessage.js";
 
-// 🔹 Kutish funksiyasi
+// 🔹 Kutish
 function delay(ms) {
   return new Promise(res => setTimeout(res, ms));
 }
@@ -14,35 +14,64 @@ export async function updateCachedMessages() {
   let deleted = 0;
 
   for (const msg of cached) {
-    try {
-      await delay(3000); // 3s kutish
+    while (true) {
+      try {
+        // Gmail API rate-limit uchun eng yaxshi format = metadata
+        const thread = await gmail.users.threads.get({
+          userId: "me",
+          id: msg.threadId,
+          format: "metadata",
+        });
 
-      const thread = await gmail.users.threads.get({
-        userId: "me",
-        id: msg.threadId,
-        format: "minimal"
-      });
+        const messages = thread.data.messages || [];
 
-      const hasSent = thread.data.messages.some(m =>
-        (m.labelIds || []).includes("SENT")
-      );
+        // Agar thread bo'sh bo'lsa — uni o'chirish kerak
+        if (messages.length === 0) {
+          await CacheMessage.deleteOne({ threadId: msg.threadId });
+          console.log(`🗑️ Thread mavjud emas → o‘chirildi: ${msg.threadId}`);
+          deleted++;
+          break;
+        }
 
-      if (hasSent) {
-        await CacheMessage.deleteOne({ threadId: msg.threadId });
-        deleted++;
-        console.log(`🗑️ Javob berilgan: ${msg.email} (${msg.subject})`);
+        // 🔥 Faqat oxirgi xabarni tekshir
+        const lastMessage = messages.at(-1);
+
+        const isReplied = (lastMessage.labelIds || []).includes("SENT");
+
+        if (isReplied) {
+          await CacheMessage.deleteOne({ threadId: msg.threadId });
+          console.log(`🗑️ Javob berilgan → cache-dan o‘chirildi: ${msg.email}`);
+          deleted++;
+        }
+
+        checked++;
+        break; // muvaffaqiyatli bo‘lsa loopdan chiqadi
+
+      } catch (err) {
+        if (err.response?.status === 429) {
+          console.warn("⚠️ Rate limit! 5s kutish → qayta tekshiraman...");
+          await delay(5000);
+          continue; // aynan shu threadni qayta tekshiradi
+        }
+
+        console.warn("❌ Thread tekshirish xatosi:", err.message);
+
+        // Agar thread o‘chirilgan bo‘lsa yoki topilmasa → cache-dan o‘chiriladi
+        if (err.response?.status === 404) {
+          await CacheMessage.deleteOne({ threadId: msg.threadId });
+          console.log(`🗑️ 404 → Thread topilmadi, o‘chirildi: ${msg.threadId}`);
+          deleted++;
+        }
+
+        break; // boshqa xatolar uchun skip
       }
-
-      checked++;
-    } catch (err) {
-      if (err.response?.status === 429) {
-        console.warn("⚠️ Rate limit. 5s kutish va qayta urinish...");
-        await delay(5000);
-        continue;
-      }
-      console.warn("❌ Thread tekshirishda xatolik:", err.message);
     }
+
+    // 🔹 Har bir iteration orasida kichkina delay
+    await delay(1500);
   }
 
-  console.log(`✅ Tekshiruv tugadi. ${checked} ta ko‘rildi, ${deleted} ta o‘chirildi.`);
+  console.log(
+    `✅ Tekshiruv tugadi. Ko‘rilgan: ${checked} ta | O‘chirilgan: ${deleted} ta.`
+  );
 }

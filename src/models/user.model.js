@@ -8,6 +8,7 @@ const UserSchema = new Schema(
     role: { type: String, required: true }, // admin / user
     isAdmin: { type: Boolean, default: false }, // super admin flag
     adminLabel: { type: String, default: null }, // "super admin" kalit so'zi
+    phoneExt: { type: String, default: null },
     phoneNumber: String,
     emailAddress: String,
     ua: String,
