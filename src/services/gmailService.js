@@ -36,7 +36,7 @@ export async function fetchReadUnrepliedMessages(keywords, daysRange, ignoredThr
         gmail.users.threads.list({
           userId: "me",
           q: `-in:sent after:${after}`,
-          maxResults: 50,
+          maxResults: 60,
           pageToken,
         })
       );
